@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  #annotations:
+    #helm.sh/hook: pre-install, post-install
+  labels:
+    app: promo-api
+  name: promo-api-cm
+  namespace: stage-1
+data:
+  manifest.json: |
+    {
+      "server": {
+        "host": "0.0.0.0",
+        "port": 6500,
+        "app": {
+          "appName": "hapi-promo",
+          "releaseVersion": "1"
+        },
+        "router": {
+          "isCaseSensitive": false,
+          "stripTrailingSlash": true
+        },
+        "cache": {
+          "name": "redisCache",
+          "provider": {
+            "constructor": {},
+            "options": {
+              "partition": "cache",
+              "host": "promo-api-redis-master",
+              "port": 6379
+            }
+          }
+        },
+        "debug": {
+          "request": [
+            "error"
+          ]
+        }
+      },
+      "register": {
+        "plugins": [
+          "hapi-pino",
+          {
+            "plugin": "hapi-internal-bridge",
+            "options": {
+              "serviceName": "API_PROMO",
+              "serviceKey": "{{ .Values.serviceKey }}",
+              "cacheName": "redisCache",
+              "cacheTTL": 120000,
+              "imApiUrl": "https://im-api-s1.altex.ro"
+            }
+          },
+          {
+            "plugin": "hapi-alerto",
+            "options": {
+              "dsn": "http://96a8d6ffa1964139b788b7cf5dfaeead@sentry-s1.altex.ro/2",
+              "releaseFile": "./release.txt"
+            }
+          },
+          {
+            "plugin": "hapi-panda-es",
+            "options": {
+              "connection": {
+                "node": "http://82.79.61.139:9212",
+                "version": 7
+              },
+              "logger": {
+                "level": 10
+              }
+            }
+          },
+          {
+            "plugin": "./plugins/promo",
+            "options": {
+              "categories": {
+                "maxLevel": 3,
+                "allowedFilters": [
+                  "level"]
+              },
+              "campaigns": {
+                "allowedFilters": [
+                  "website_code",
+                  "slug",
+                  "is_main"]
+              },
+              "products": {
+                "allowedFilters": [
+                  "website_id",
+                  "stock_status"]
+              }
+            }
+          }
+        ]
+      }
+    }

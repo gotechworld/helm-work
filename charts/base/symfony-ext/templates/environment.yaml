@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "symfony.fullname" . }}-env
+  labels:
+    app: {{ template "symfony.fullname" . }}-www
+data:
+{{- with .Values.data }}
+{{ toYaml . | indent 2 }}
+{{- end }}

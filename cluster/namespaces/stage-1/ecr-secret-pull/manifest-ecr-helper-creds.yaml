@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ecr-registry-helper-secrets
+  namespace: stage-1
+stringData:
+  AWS_SECRET_ACCESS_KEY: "XXXX"
+  AWS_ACCESS_KEY_ID: "YYY"
+  AWS_ACCOUNT: "009570627831"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecr-registry-helper-cm
+  namespace: stage-1
+data:
+  AWS_REGION: "eu-central-1"
+  DOCKER_SECRET_NAME: regcred
+

@@ -1,0 +1,160 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: reviews-api
+  name: reviews-api-cm
+  namespace: stage-1
+data:
+  manifest.json: |
+    {
+      "server": {
+        "host": "0.0.0.0",
+        "port": 4650,
+        "app": {
+          "appName": "reviews-api",
+          "releaseVersion": "1"
+        },
+        "router": {
+          "isCaseSensitive": false,
+          "stripTrailingSlash": true
+        },
+        "cache": [
+          {
+            "name": "redisCache",
+            "provider": {
+              "constructor": {},
+              "options": {
+                "partition" : "cache",
+                "host": "reviews-api-redis-master",
+                "port": 6379
+              }
+            }
+          }
+        ],
+        "debug": {
+          "request": [
+            "error"
+          ]
+        }
+      },
+      "register": {
+        "plugins": [
+          "hapi-pino",
+          {
+            "plugin": "hapi-internal-bridge",
+            "options": {
+              "serviceName": "API_REVIEW",
+              "serviceKey": "{{ .Values.serviceKey }}",
+              "cacheName": "redisCache",
+              "cacheTTL": 120000,
+              "imApiUrl": "https://im-api-s1.altex.ro"
+            }
+          },
+          {
+            "plugin": "hapi-alerto",
+            "options": {
+              "dsn": "http://5fdde5ad94b34dda8551aa951f66366d@sentry-s1.altex.ro/5"
+            }
+          },
+          {
+            "plugin": "hapi-panda-mongoose",
+            "options": {
+              "uri": "mongodb://82.79.61.139:19678/reviews",
+              "mongooseOptions": {
+                "autoIndex": true,
+                "autoReconnect": true,
+                "poolSize": 50
+              }
+            }
+          },
+          {
+            "plugin": "./plugins/reviews/",
+            "options": {
+              "models": ["review", "question", "summary", "report", "stat", "review_type", "lock"],
+              "auth": {
+                "name": "API_REVIEW",
+                "key": "{{ .Values.key }}"
+              },
+              "autoApprove": {
+                "enabled": false,
+                "minWords": 30
+              },
+              "merchandisers": {
+                "SONY": "email10@sony.com",
+                "APPLE": "email@apple.com"
+              },
+              "minPopularUpvotes": 10,
+              "services": {
+                "media": {
+                  "baseUrl": "https://mediacdn-s1.altex.ro/",
+                  "token": "{{ .Values.token }}"
+                },
+                "queueCustomerAtx": {
+                  "dsn": "amqp://itops:altex@10.10.10.19:12672/customer_altex",
+                  "prefetchCount": 1
+                },
+                "queueCustomerMg": {
+                  "dsn": "amqp://itops:altex@10.10.10.19:12672/customer_mediagalaxy",
+                  "prefetchCount": 1
+                },
+                "queue": {
+                  "dsn": "amqp://itops:altex@10.10.10.19:12672/reviews",
+                  "prefetchCount": 1
+                },
+                "oms": {
+                  "baseUrl": "https://oms-s1.altex.ro/"
+                },
+                "catalog": {
+                  "baseUrl": "https://catalog-s1.altex.ro/"
+                },
+                "notif": {
+                  "websites": {
+                    "altex": {
+                      "baseUrl": "https://notif-s1.altex.ro/"
+                    },
+                    "mediagalaxy": {
+                      "baseUrl": "https://notif-s1.mediagalaxy.ro/"
+                    }
+                  },
+                  "reportEmailSend": "test@altex.ro"
+                },
+                "customer": {
+                  "websites": {
+                    "altex": {
+                      "baseUrl": "https://cm-s1.altex.ro"
+                    },
+                    "mediagalaxy": {
+                      "baseUrl": "https://cm-s1.mediagalaxy.ro"
+                    }
+                  }
+                },
+                "magento": {
+                    "baseUrl": "https://ecom-api-s1.altex.ro",
+                    "headers": {
+                      "Content-Type": "application/x-www-form-urlencoded",
+                      "X-Request-AtxApi": "{{ .Values.XRequestAtxApi }}"
+                    }
+                },
+                "crmMiddleware": {
+                  "baseUrl": "https://crm-api-s1.altex.ro"
+                },
+                "product": {
+                    "baseUrl": "https://enginey-s1.altex.ro",
+                    "basicAuth": "feeds:2d419fbcfa8bf31ca60c1a726de3ae96"
+                }
+              }
+            }
+          },
+          "@hapi/inert",
+          "@hapi/vision",
+          {
+            "plugin": "hapi-swagger",
+            "info": {
+              "title": "Reviews API",
+              "version": "1.0.0"
+            }
+          }
+        ]
+      }
+    }

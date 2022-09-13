@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: catalog-api
+  name: catalog-api-cm
+  namespace: stage-1
+data:
+  manifest.json: |
+    {
+      "server": {
+        "host": "0.0.0.0",
+        "port": 4000,
+        "app": {
+          "appName": "hapi-catalog-api",
+          "releaseVersion": "1"
+        },
+        "router": {
+          "stripTrailingSlash": true
+        },
+        "cache": {
+          "name": "redisCache",
+          "provider": {
+            "constructor": {},
+            "options": {
+              "partition" : "cache",
+              "host": "catalog-api-redis-master",
+              "port": 6379
+            }
+          }
+        },
+        "debug": {
+          "request": [
+            "error"
+          ]
+        }
+      },
+      "register": {
+        "plugins": [
+          {
+            "plugin": "hapi-pino"
+          },
+          {
+            "plugin": "hapi-internal-bridge",
+            "options": {
+              "serviceName": "API_CATALOG",
+              "serviceKey": "{{ .Values.serviceKey }}",
+              "cacheName": "redisCache",
+              "cacheTTL": 120000,
+              "imApiUrl": "https://im-api-s1.altex.ro"
+            }
+          },
+          {
+            "plugin": "hapi-alerto",
+            "options": {
+              "dsn": "https://e05f6827e57d42bca1bdffc33e444933@sentry.io/1529062",
+              "releaseFile": "release.txt"
+            }
+          },
+          {
+            "plugin": "es-client-wrapper",
+            "options":  {
+              "node": "http://82.79.61.139:9212",
+              "version": 7
+            }
+          },
+          {
+            "plugin": "./plugins/catalog-data",
+            "options": {
+              "cache": {
+                "cache": "redisCache",
+                "expiresIn": 600000
+              },
+              "gravity": {
+                "store": "altex"
+              },
+              "enginey": {
+                "websiteId": 1,
+                "url": "https://enginey-s1.altex.ro/catalog/v1/search",
+                "itemsPerPage": 10
+              },
+              "specialFilters": ["filter_promotion","filtru_noutati","filtru_precomanda","filtru_stoc","on_demand","in_bundle"]
+            }
+          },
+          {
+            "plugin": "./plugins/catalog-rest",
+              "routes": {
+                "prefix": "/rest"
+              }
+          },
+          {
+            "plugin": "@hapi/vision"
+          },
+          {
+            "plugin": "@hapi/inert"
+          },
+          {
+            "plugin": "hapi-swagger",
+            "options": {
+              "info": {
+                "title": "Catalog API",
+                "version": "2.0.0"
+              }
+            }
+          }
+        ]
+      }
+    }

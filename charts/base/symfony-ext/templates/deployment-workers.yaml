@@ -1,0 +1,60 @@
+{{- if .Values.workers.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "symfony.fullname" . }}-workers
+  labels:
+    app: {{ template "symfony.fullname" . }}-workers
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "symfony.fullname" . }}-workers
+  template:
+    metadata:
+      labels:
+        app: {{ include "symfony.fullname" . }}-workers
+      annotations:
+        prometheus.io/port: '9253'
+        prometheus.io/scrape: 'false'
+    spec:
+      {{- /* Rendered if .Values.customDnsConfig.enabled*/ -}}
+      {{- include "pod.dns.config" . | indent 6 }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}
+      initContainers:
+      {{- include "init.container.init-www-data" . | indent 6 }}
+      containers:
+        - name: supervisor
+          image: {{ .Values.nginx.image.registry }}/{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}
+          imagePullPolicy: IfNotPresent         
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          command:
+          - /bin/bash
+          - -c
+          - cp /var/www/ci/worker-confs/supervisord_prod.conf /etc/supervisor.d/conf.d/apps.conf && supervisord -c /etc/supervisord.conf -n -j /supervisord.pid
+          volumeMounts:
+            {{- include "pod.volumeMounts" . | indent 12 }} 
+          env:
+            {{- include "pod.env" . | indent 12 }} 
+          resources:
+            {{- toYaml .Values.workers.resources | nindent 12 }}
+      {{- with .Values.workers.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.workers.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.workers.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      volumes:
+      {{- include "pod.volumes" . | indent 8 }}
+{{- end }}

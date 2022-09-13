@@ -1,0 +1,29 @@
+{{- if .Values.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "symfony.fullname" . }}-www
+  labels:
+    app: {{ template "symfony.fullname" . }}-www
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ template "symfony.fullname" . }}-www
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.autoscaling.enableCpuMetric }}
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: {{ .Values.autoscaling.targetAverageUtilization }}
+    {{- end }}
+    {{- if .Values.autoscaling.enableMemMetric }}
+    - type: Resource
+      resource:
+        name: memory
+        targetAverageValue: {{ .Values.autoscaling.targetAverageValue }}
+  {{- end }}
+  {{- end }}

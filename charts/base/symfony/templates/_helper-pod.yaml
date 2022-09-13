@@ -1,0 +1,95 @@
+{{- define "pod.env" }}
+- name: POD_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+- name: POD_NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+- name: NODE_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: spec.nodeName
+- name: NODE_IP
+  valueFrom:
+    fieldRef:
+      fieldPath: status.hostIP
+- name: IMAGE_TAG
+  value: {{ .Values.app.image.tag }}
+{{- end }}
+
+{{/* Template for rendering dnsConfig defined in values - .Values.customDnsConfig */}}
+{{- define "pod.dns.config" }}
+{{- if .Values.customDnsConfig.enabled }}
+dnsConfig:
+  options:
+  {{- .Values.customDnsConfig.options | toYaml | nindent 2 }}
+{{- end }}
+{{- end }}
+
+{{/* Template for rendering volumes */}}
+{{- define "pod.volumes" }}
+- name: www-data
+  emptyDir: {}
+- name: nginxconf
+  configMap:
+    name: {{ template "symfony.fullname" . }}-nginx
+- name: phpconf
+  configMap:
+    name: {{ template "symfony.fullname" . }}-php
+- name: env
+  {{- if eq .Values.envMode "production" }}
+  csi:
+    driver: secrets-store.csi.k8s.io
+    readOnly: true
+    volumeAttributes:
+      secretProviderClass: {{ template "symfony.fullname" . }}-spc-secret
+  {{- else }}
+  configMap:
+    name:  {{ template "symfony.fullname" . }}-env
+  {{- end }}
+{{- if not (eq .Values.envMode "production") }}
+{{- range .Values.extraMounts }}
+- name: {{ .name }}
+  secret:
+    secretName: {{ .name }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/* Template for rendering volume mounts */}}
+{{- define "pod.volumeMounts" }}
+- name: www-data
+  mountPath: /var/www
+- name: env
+  {{- if eq .Values.appIs "ecom-api" }}
+  mountPath: /var/www/app/config/parameters.yml
+  subPath: parameters.yml
+  {{- else }}
+    mountPath: /var/www/.env
+  subPath: .env
+  {{- end }}
+- name: nginxconf
+  mountPath: /etc/nginx/nginx.conf
+  subPath: nginx.conf
+- name: phpconf
+  mountPath: {{ default "/etc/php/7.3/php-fpm.d/www.conf" .Values.php.fpmconfigpath }}
+  subPath: zz-docker.conf
+- name: phpconf
+  mountPath: {{ default "/etc/php/7.3/php.ini" .Values.php.phpiniconfigpath }}
+  subPath: php.ini
+{{- if eq .Values.envMode "production" }}
+{{- range .Values.extraMounts }}
+- name: env
+  mountPath: {{ .mountPath }}
+  subPath: {{ .subPath }}
+{{- end }}
+{{- else }}
+{{- range .Values.extraMounts }}
+- name: {{ .name }}
+  mountPath: {{ .mountPath }}
+  subPath: {{ .subPath }}
+{{- end }}
+{{- end }}
+{{- end }}

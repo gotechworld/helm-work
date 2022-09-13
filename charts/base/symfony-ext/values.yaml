@@ -1,0 +1,177 @@
+# Default values for review.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+envMode: production
+
+nameOverride:
+fullnameOverride: DEMO-api
+
+replicaCount: 1
+imagePullSecret: regcred
+imagePullPolicy: Always
+
+app:
+  image:
+    registry: 009570627831.dkr.ecr.eu-central-1.amazonaws.com
+    repository: DEMO-api
+    tag: tst-20220511-e1cdc7867a-1
+  pullPolicy: Always
+
+composer:
+  image:
+    registry: 009570627831.dkr.ecr.eu-central-1.amazonaws.com
+    repository: composer-php73
+    tag: C7.3-C190
+
+php:
+  phpiniconfigpath: /usr/local/etc/php/php.ini
+  fpmconfigpath: /usr/local/etc/php-fpm.d/www.conf
+  memoryLimit: 100M
+  config:
+    # completely override nginx config
+    override: ""
+    # append config params to existing or overridden config
+    append: ""
+
+nginx:
+  cors:
+    enabled: false
+    headers:
+      Access-Control-Allow-Methods:
+        value: "GET,POST,PATCH,OPTIONS,PUT,DELETE"
+        always: true
+      Access-Control-Allow-Credentials:
+        value: "true"
+        always: true
+      Access-Control-Allow-Origin:
+        value: "$http_origin"
+        always: true
+      Access-Control-Allow-Headers:
+        value: "Authorization,DNT,User-Agent,Keep-Alive,Content-Type,Accept,Origin,X-Requested-With,device"
+        always: true
+  image:
+    registry: 009570627831.dkr.ecr.eu-central-1.amazonaws.com
+    repository: php
+    tag: 7.3-nginx
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 10m
+      memory: 500Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+service:
+  type: ClusterIP
+  port: 80
+
+customDnsConfig:
+  enabled: false
+  options:
+    - name: ndots
+      value: "1"
+    - name: single-request-reopen
+
+ingress:
+  enabled: false
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  domain: atx-microservice.atx.ro
+  tls:
+    enabled: false
+    cert: nginx-cert
+
+sa:
+  enabled: true
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::009570627831:role/example-role
+
+sm:
+  enabled: true
+
+mysql:
+  enabled: false
+  runMigration: false
+  persistence:
+    enabled: false
+  fullnameOverride: "atx-microservices-mysql"
+  mysqlUser: "review"
+  mysqlPassword: "secret"
+  mysqlDatabase: "review"
+  service:
+    type: NodePort
+
+redis:
+  enabled: true
+  repository: docker.io/bitnami/redis
+  tag: latest
+  pullPolicy: IfNotPresent
+  master:
+    persistence:
+      enabled: false
+  cluster:
+    enabled: false
+  usePassword: false
+  fullnameOverride: DEMO-redis
+  nameOverride: DEMO-redis
+  flags: --appendonly no
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 100Mi
+
+firestore:
+  runMigration: false
+  enabled: false
+
+workers:
+  enabled: false
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 10m
+      memory: 500Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+livenessProbe:
+  timeoutSeconds: 5
+readinessProbe:
+  timeoutSeconds: 5
+
+extraMounts: []
+
+
+cronjobs:
+  enabled: false
+  # specify job name, command and schedule
+  jobs: []
+#  - name: yotpo-product-refresh
+#    schedule: "*/10 * * * *"
+#    command:
+#      - /bin/bash
+#      - -c
+#      - php /var/www/bin/console yotpo:product:import
+
+data: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 8
+  enableCpuMetric: true
+  targetAverageUtilization: 50
+  enableMemMetric: true
+  targetAverageValue: 400Mi

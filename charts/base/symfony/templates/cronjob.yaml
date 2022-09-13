@@ -1,0 +1,39 @@
+{{- if .Values.cronjobs.enabled }}
+{{- $outer := . -}}
+{{- range $id, $job := .Values.cronjobs.jobs }}
+{{- with $outer }}
+# TODO: add resources, affinity, toleration etc...
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ template "symfony.fullname" . }}-cronjob-{{ $job.name }}
+  labels:
+    app: {{ template "symfony.fullname" . }}-cronjob-{{ $job.name }}
+spec:
+  schedule: {{ $job.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          imagePullSecrets:
+            - name: {{ .Values.imagePullSecret }}
+          initContainers:
+          {{- include "init.container.init-www-data" . | indent 10 }}
+          {{- include "init.container.init-cache-clear" . | indent 10 }}
+          containers:
+          - name: nginx
+            image: {{ .Values.nginx.image.registry }}/{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}
+            imagePullPolicy: IfNotPresent
+            args:
+            {{- toYaml $job.command | nindent 12 }}                
+            volumeMounts:
+            {{- include "pod.volumeMounts" . | indent 12 }} 
+            env:
+            {{- include "pod.env" . | indent 12 }}  
+          restartPolicy: OnFailure 
+          volumes:
+          {{- include "pod.volumes" . | indent 12 }}
+{{- end }}
+{{- end }}
+{{- end }}

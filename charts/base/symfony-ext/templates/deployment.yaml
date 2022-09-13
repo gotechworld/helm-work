@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "symfony.fullname" . }}-www
+  labels:
+    app: {{ template "symfony.fullname" . }}-www
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "symfony.fullname" . }}-www
+  template:
+    metadata:
+      labels:
+        app: {{ include "symfony.fullname" . }}-www
+      annotations:
+        prometheus.io/port: '9253'
+        prometheus.io/scrape: 'false'
+    spec:
+      {{- /* Rendered if .Values.customDnsConfig.enabled*/ -}}
+      {{- include "pod.dns.config" . | indent 6 }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}
+      serviceAccountName: {{ template "symfony.fullname" . }}-sa
+      initContainers:
+      {{- include "init.container.init-www-data" . | indent 6 }}
+      containers:
+        - name: nginx
+          image: {{ .Values.nginx.image.registry }}/{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            
+          volumeMounts:
+            {{- include "pod.volumeMounts" . | indent 12 }} 
+          env:
+            {{- include "pod.env" . | indent 12 }}  
+          resources:
+          {{- toYaml .Values.nginx.resources | nindent 12 }}
+      {{- with .Values.nginx.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.nginx.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.nginx.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      volumes:
+      {{- include "pod.volumes" . | indent 8 }}

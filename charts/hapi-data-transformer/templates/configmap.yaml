@@ -1,0 +1,166 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: data-transformer-api
+  name: data-transformer-api-cm
+  namespace: stage-1
+data:
+  manifest.json: |
+    {
+      "server": {
+        "host": "0.0.0.0",
+        "port": 6800,
+        "app": {
+          "appName": "hapi-data-transformer",
+          "releaseVersion": "1"
+        },
+        "router": {
+          "isCaseSensitive": false,
+          "stripTrailingSlash": true
+        },
+        "cache": [
+          {
+            "name": "redisCache",
+            "provider": {
+                "constructor": {},
+                "options": {
+                    "partition": "session",
+                    "host": "data-transformer-api-redis-master",
+                    "port": 6379
+                }
+            }
+          }
+        ],
+        "debug": {
+          "$filter": "env",
+          "$base": {
+            "request": [
+              "error"
+            ]
+          },
+          "$default": {
+            "log": [
+              "info",
+              "error",
+              "connection",
+              "client"
+            ]
+          },
+          "production": {
+            "log": [
+              "error"
+            ]
+          }
+        }
+      },
+      "register": {
+        "plugins": [
+          {
+            "plugin": "hapi-pino"
+          },
+          {
+            "plugin": "hapi-internal-bridge",
+            "options": {
+              "serviceName": "API_TRANSFORMER",
+              "serviceKey": "{{ .Values.serviceKey }}",
+              "cacheName": "redisCache",
+              "cacheTTL": 120000,
+              "imApiUrl": "https://im-api-s1.altex.ro"
+            }
+          },
+          {
+            "plugin": "./plugins/transformer",
+            "options": {
+              "localWebsites": ["altex", "mediagalaxy"],
+              "services": {
+                  "orderExport": {
+                    "ax": {
+                      "xsltPath": "/var/www/hapi-data-transformer/config/order_export.xslt",
+                      "ftpPath": "ftp://82.79.61.131",
+                      "curlMaxTime": "19",
+                      "magentoRezDir": "IMP_MAGENTOREZ",
+                      "archiveDir": "/var/archive/ax/",
+                      "uploadFiles": false,
+                      "ftp": {
+                        "user": "datatransformer",
+                        "password": "{{ .Values.password }}"
+                      }
+                    },
+                    "mkp": {
+                      "endpoint": "http://marketplace.altex.ro/createOrder/"
+                    }
+                  },
+                  "credentials": {
+                    "name": "API_TRANSFORMER",
+                    "key": "{{ .Values.key }}"
+                  },
+                  "axFtp": {
+                      "host": "82.79.61.131",
+                      "port": 21,
+                      "user": "datatransformer",
+                      "password": "{{ .Values.password }}",
+                      "timeout": 60000,
+                      "secure": false,
+                      "sslOptions": {}
+                  },
+                  "stockInventoryApi": {
+                      "altex": {
+                          "baseUrl": "https://stock-s1.altex.ro"
+                      },
+                      "mediagalaxy": {
+                          "baseUrl": "https://stock-s1.altex.ro"
+                      }
+                  },
+                  "priceAndPromoApi": {
+                      "altex": {
+                          "baseUrl": "https://pp-s1.altex.ro"
+                      },
+                      "mediagalaxy": {
+                          "baseUrl": "https://pp-s1.altex.ro"
+                      }
+                  },
+                  "catalogApi": {
+                    "altex": {
+                      "baseUrl": "https://catalog-s1.altex.ro"
+                    },
+                    "mediagalaxy": {
+                      "baseUrl": "https://catalog-s1.altex.ro"
+                    }
+                  },
+                  "omsApi": {
+                    "baseUrl": "https://oms-s1.altex.ro"
+                  },
+                  "checkoutApi": {
+                    "altex": {
+                      "baseUrl": "https://checkout-s1.altex.ro"
+                    },
+                    "mediagalaxy": {
+                      "baseUrl": "https://checkout-s1.altex.ro"
+                    }
+                  }
+              },
+              "cache": {
+                  "host": "data-transformer-api-redis-master",
+                  "port": 6379
+              }
+            }
+          },
+          {
+            "plugin": "@hapi/vision"
+          },
+          {
+            "plugin": "@hapi/inert"
+          },
+          {
+            "plugin": "hapi-swagger",
+            "options": {
+              "info": {
+                "title": "Data Transformer API",
+                "version": "1.0.0"
+              }
+            }
+          }
+        ]
+      }
+    }

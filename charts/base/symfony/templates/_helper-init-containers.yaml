@@ -1,0 +1,41 @@
+{{/*
+Init containers definitions
+*/}}
+
+{{/* Init container init www data (code) template */}}
+{{- define "init.container.init-www-data" }}
+- name: init-www-data
+  image: {{ .Values.app.image.registry }}/{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}
+  imagePullPolicy: {{ .Values.imagePullPolicy }}
+  command:
+    - sh
+    - -c
+    - cp -r /source/. /var/www/ && chown -R 82:82 /var/www
+  volumeMounts:
+  - name: www-data
+    mountPath: /var/www
+{{- end }}
+
+{{/* Init container init cache clear template */}}
+{{- define "init.container.init-cache-clear" }}
+- name: init-cache-clear
+  image: {{ .Values.composer.image.registry }}/{{ .Values.nginx.composer.repository }}:{{ .Values.composer.image.tag }}
+  imagePullPolicy: {{ .Values.imagePullPolicy }}
+  command: ['sh', '-c', '/usr/local/bin/composer install']
+  volumeMounts:
+  {{- include "pod.volumeMounts" . | indent 4 }}
+{{- end }}
+
+{{/* Init container init mysql migrations template */}}
+{{- define "init.container.init-mysql-migrations" }}
+- name: init-migrations
+  image: {{ .Values.nginx.image.registry }}/{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}
+  imagePullPolicy: {{ .Values.imagePullPolicy }}
+  command: ['sh', '-c', 'php bin/console doctrine:migrations:migrate --no-interaction']
+  env:
+  - name: MYSQL_DATABASE
+    value: {{ .Release.Namespace }}-{{ template "symfony.fullname" . }}
+  volumeMounts:
+  {{- include "pod.volumeMounts" . | indent 4 }}
+{{- end }}
+

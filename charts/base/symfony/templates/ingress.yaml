@@ -1,0 +1,29 @@
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "symfony.fullname" . -}}
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-www
+  labels:
+    app: {{ template "symfony.fullname" . }}-www
+{{- with .Values.ingress.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  rules:
+  - host: {{ .Values.ingress.domain }}
+    http:
+      paths:
+      - backend:
+          serviceName: {{ $fullName }}-www
+          servicePort: http
+        path: /
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+  - hosts:
+    - {{ .Values.ingress.domain }}
+    secretName: {{ .Values.ingress.tls.cert }}
+  {{- end }}
+{{- end }}

@@ -23,6 +23,10 @@ Grafana Web Panel
 
 + `kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring`
 
+## Deploy Grafana Loki (values.yaml -> go to the gist for infos)
+
++ `helm install loki --namespace=monitoring -f values.yaml grafana/loki-stack`
+
 ## Poke around prom, alertmanager grafana and alertmanager with ingresses
 
 [alertmanager](http://alertmanager.stage-1-eks-stage-ecom.altex.ro)

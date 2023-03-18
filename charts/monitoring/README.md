@@ -25,6 +25,8 @@ Grafana Web Panel
 
 ## Deploy Grafana Loki (values.yaml -> go to the gist for infos)
 
++ `helm repo add grafana https://grafana.github.io/helm-charts`
+
 + `helm install loki --namespace=monitoring -f values.yaml grafana/loki-stack`
 
 ## Poke around prom, alertmanager grafana and alertmanager with ingresses

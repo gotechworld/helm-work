@@ -36,3 +36,19 @@ Grafana Web Panel
 [grafana](http://grafana.stage-1-eks-stage-ecom.altex.ro)
 
 [prometheus](http://prometheus.stage-1-eks-stage-ecom.altex.ro)
+
+## Uninstall Helm chart
+
++ `helm delete kube-prometheus-stack -n monitoring`
+
+&nbsp;
+
+```kubectl delete crd alertmanagerconfigs.monitoring.coreos.com
+kubectl delete crd alertmanagers.monitoring.coreos.com
+kubectl delete crd podmonitors.monitoring.coreos.com
+kubectl delete crd probes.monitoring.coreos.com
+kubectl delete crd prometheuses.monitoring.coreos.com
+kubectl delete crd prometheusrules.monitoring.coreos.com
+kubectl delete crd servicemonitors.monitoring.coreos.com
+kubectl delete crd thanosrulers.monitoring.coreos.com
+```
